@@ -90,7 +90,7 @@ def login_to_megamarket(driver, phone):
     time.sleep(15)
     get_code_button = driver.find_element(By.CLASS_NAME, "login-form__submit")
     get_code_button.click()
-    wait = WebDriverWait(driver, 1200)
+    wait = WebDriverWait(driver, 2400)
     wait.until(EC.url_to_be('https://megamarket.ru/'))
     driver.get('https://megamarket.ru/personal/loyalty')
 
