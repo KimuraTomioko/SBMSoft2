@@ -5,6 +5,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 import pandas as pd
+import pandas as pd
+from gologin import GoLogin
+from gologin import getRandomPort
+import http.client
+import json
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromiumService
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.core.os_manager import ChromeType
 
 name = 'Александр'
 surname = 'Мершин'
@@ -18,26 +27,49 @@ comment ='контактный номер телефона +7(926) 046-73-13'
 promo_code = 'EZ'
 real_phone = '9260461312'
 
-def open_browser():
-    chrome_options = webdriver.ChromeOptions()
-    prefs = {"profile.default_content_setting_values.notifications": 2}
-    chrome_options.add_experimental_option("prefs", prefs)
-    driver = webdriver.Chrome(options=chrome_options)
-    return driver
+def get_profile_ids():
+    conn = http.client.HTTPSConnection("api.gologin.com")
+    payload = ''
+    headers = {
+      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NWE4MWEyODc3ZWYzOGIyMGFkNTQ2NGEiLCJ0eXBlIjoiZGV2Iiwiand0aWQiOiI2NWFlMGI0NGQ4OTUzYWQ4MmU0NGUyM2EifQ.dr4Y6SGw6TnpsLMCnl4yTgvmDszSjUwViVKMJsX5wYg',
+      'Content-Type': 'application/json'
+    }
+    conn.request("GET", "/browser/v2", payload, headers)
+    res = conn.getresponse()
+    data = res.read()
 
-def login_to_megamarket(driver, phone):
-    driver.get("https://megamarket.ru/login/")
-    time.sleep(7)
-    login_button = driver.find_element(By.CLASS_NAME, "auth-main__phone-login")
-    login_button.click()
-    time.sleep(5)
-    phone_input = driver.find_element(By.CLASS_NAME, "text-input")
-    phone_input.send_keys(phone)
-    time.sleep(15)
-    get_code_button = driver.find_element(By.CLASS_NAME, "login-form__submit")
-    get_code_button.click()
+    # Преобразование JSON-строки в словарь Python
+    response_data = json.loads(data.decode("utf-8"))
+
+    # Получение списка профилей
+    profiles = response_data.get("profiles", [])
+
+    # Извлечение значений id из каждого профиля
+    profile_ids = [profile.get("id") for profile in profiles]
+
+    return profile_ids
+
+
+def open_browser(profile_id):
+    gl = GoLogin({
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NWE4MWEyODc3ZWYzOGIyMGFkNTQ2NGEiLCJ0eXBlIjoiZGV2Iiwiand0aWQiOiI2NWFlMGI0NGQ4OTUzYWQ4MmU0NGUyM2EifQ.dr4Y6SGw6TnpsLMCnl4yTgvmDszSjUwViVKMJsX5wYg",
+        "profile_id": profile_id
+    })
+
+    debugger_address = gl.start()
+
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_experimental_option("debuggerAddress", debugger_address)
+    chrome_options.add_argument("--disable-notifications")
+
+    driver = webdriver.Chrome(service=ChromiumService(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()), options=chrome_options)
+    return driver, gl
+
+def login_to_megamarket(driver):
+    driver.get('https://megamarket.ru/')
     wait = WebDriverWait(driver, 1200)
     wait.until(EC.url_to_be('https://megamarket.ru/'))
+    time.sleep(5)
     driver.get(link_first_product)
     time.sleep(10)
 
@@ -91,16 +123,19 @@ def login_to_megamarket(driver, phone):
         time.sleep(10)
     
     address_input = wait.until(EC.visibility_of_element_located((By.NAME, "address-string")))
+    address_input.clear()
     address_input.send_keys(address)
 
     time.sleep(5)
 
     comment_textarea = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "textarea.text-input.xl")))
+    comment_textarea.clear()
     comment_textarea.send_keys(comment)
 
     time.sleep(5)
 
     promo_code_input = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "input.text-input.fix-label.sm")))
+    promo_code_input.clear()
     promo_code_input.send_keys(promo_code)
 
     time.sleep(5)
@@ -124,13 +159,19 @@ def login_to_megamarket(driver, phone):
     # Найти поле ввода
     phone_input = driver.find_element(By.XPATH, '//input[contains(@class, "text-input")]')
 
+    # Кликнуть на поле ввода, чтобы убедиться, что оно активно
+    phone_input.click()
+
     # Очистить поле ввода
     phone_input.clear()
+    
+    # Кликнуть на поле ввода, чтобы убедиться, что оно активно
+    phone_input.click()
 
     # Ввести данные из переменной real_phone
     phone_input.send_keys(real_phone)
 
-    time.sleep(10)
+    time.sleep(5)
 
     # Найти кнопку
     submit_button = WebDriverWait(driver, 10).until(
@@ -139,20 +180,23 @@ def login_to_megamarket(driver, phone):
 
     # Нажать на кнопку
     submit_button.click()
+    time.sleep(5)
 
-    time.sleep(10)
 
 def main():
-    
-    phone = '9384293264'
-    driver = open_browser()
+    profile_ids = get_profile_ids()
 
-    try:
-        login_to_megamarket(driver, phone)
-    except Exception as e:
-        print(f"Произошла ошибка: {e}")
-    finally:
-        driver.quit()
+    for profile_id in profile_ids:
+        driver, gl = open_browser(profile_id)
+
+        try:
+            login_to_megamarket(driver)
+        except Exception as e:
+            print(f"Произошла ошибка: {e}")
+        finally:
+            driver.quit()
+            gl.stop()
+            time.sleep(3)
 
 if __name__ == "__main__":
     main()

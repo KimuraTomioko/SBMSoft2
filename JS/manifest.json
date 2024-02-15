@@ -1,0 +1,11 @@
+{
+  "name": "SMM promo hack",
+  "version": "1.2",
+  "manifest_version": 3,
+  "description": "Расширение для хака промо",
+  "background": {
+    "service_worker": "sw.js"
+  },
+  "permissions": ["scripting", "webNavigation", "storage", "contextMenus", "storage", "tabs", "activeTab", "unlimitedStorage"],
+  "action": {}
+}

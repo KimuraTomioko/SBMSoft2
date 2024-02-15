@@ -124,13 +124,19 @@ def login_to_megamarket(driver, phone):
     # Найти поле ввода
     phone_input = driver.find_element(By.XPATH, '//input[contains(@class, "text-input")]')
 
+    # Кликнуть на поле ввода, чтобы убедиться, что оно активно
+    phone_input.click()
+
     # Очистить поле ввода
     phone_input.clear()
+    
+    # Кликнуть на поле ввода, чтобы убедиться, что оно активно
+    phone_input.click()
 
     # Ввести данные из переменной real_phone
     phone_input.send_keys(real_phone)
 
-    time.sleep(10)
+    time.sleep(5)
 
     # Найти кнопку
     submit_button = WebDriverWait(driver, 10).until(
@@ -140,7 +146,7 @@ def login_to_megamarket(driver, phone):
     # Нажать на кнопку
     submit_button.click()
 
-    time.sleep(10)
+    time.sleep(30)
 
 def main():
     

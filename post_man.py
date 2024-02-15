@@ -17,8 +17,8 @@ response_data = json.loads(data.decode("utf-8"))
 # Получение списка профилей
 profiles = response_data.get("profiles", [])
 
-# Создание словаря name : id
-name_id_dict = {profile.get("name"): profile.get("id") for profile in profiles}
+# Извлечение значений id из каждого профиля
+profile_ids = [profile.get("id") for profile in profiles]
 
-print(name_id_dict)
+print(profile_ids)
 
